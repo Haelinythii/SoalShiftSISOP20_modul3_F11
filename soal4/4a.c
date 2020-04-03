@@ -64,10 +64,6 @@ int main()
     int shmid = shmget(key, sizeof(int[4][5]), 0666|IPC_CREAT);
     int (*matrix)[5];
     matrix = shmat(shmid,(void*)0,0);
-    // matrix = (int **) malloc(sizeof(int *) * 4);
-    // for (size_t i = 0; i < 4; i++) {
-    //   matrix[i] = (int *) malloc(5 * sizeof(int));
-    // }
     for (size_t i = 0; i < matrix1X; i++) {
       for (size_t j = 0; j < matrix2Y; j++) {
         matrix[i][j] = matrixHasil[i][j];

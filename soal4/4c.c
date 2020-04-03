@@ -6,7 +6,6 @@
 #include<sys/wait.h>
 
 int fd1[2];
-int fd2[2];
 
 void execLS ()
 {
@@ -29,11 +28,6 @@ void execWC()
 int main()
 {
 	if (pipe(fd1)==-1)
-	{
-		fprintf(stderr, "Pipe Failed" );
-		return 1;
-	}
-	if (pipe(fd2)==-1)
 	{
 		fprintf(stderr, "Pipe Failed" );
 		return 1;
