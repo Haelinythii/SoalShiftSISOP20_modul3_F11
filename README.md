@@ -547,3 +547,210 @@ int main(int argc, char **argb){
 Pengerjaan soal menggunakan salah satu ddari 3 fungsi thread yang dibuat, sesuai dengan argumen yang dimasukan. Pada argumen "-f", akan dibuat thread sebanyak banyak argumen setelah "-f". Pada argumen "\*", akan dibuat thread sebanyak semua file dalam working directory. Pada argumen "-d", akan dibuat thread sebanyak semua file dalam path directory pada argumen setelah "-d". Tiap thread akan membuat folder dengan nama sesuai dengan ekstensi file yang diproses, jika folder belum ada. Karena tidak case sensitif, semua folder edngan huruf uppercase akan diubah menjadi lowercase. Setelah itu, thread memproses absolute path dari source dan tujuan. Fungsi moveFileUtil akan menyalin isi dari source ke tujuan dan remove source. Dalam kata lain, file tersebut dipindahkan ke dalam folder yang baru saja dibuat.
 
 ## Soal 4
+### 4a.
+```c
+#define matrix1X 4
+#define matrix1Y 2
+#define matrix2X 2
+#define matrix2Y 5
+
+int matrix1 [matrix1X][matrix1Y] = {
+  {1,2},
+  {4,5},
+  {1,3},
+  {8,3}
+};
+int matrix2 [matrix2X][matrix2Y] = {
+  {3,6,5,2,1},
+  {2,1,4,3,2},
+};
+int matrixHasil [matrix1X][matrix2Y] = {
+  {0,0,0,0,0},
+  {0,0,0,0,0},
+  {0,0,0,0,0},
+  {0,0,0,0,0}
+};
+```
+
+diatas ini adalah pendefinisian ukuran matrix yang akan dihitung. Jika matrix MxN * NxP maka hasilnya MxP. Ada juga pendeklarasian matrix yang ingin dihitung.
+
+
+```c
+int jumlahThread = matrix1X*matrix2Y;
+    pthread_t threads [jumlahThread];
+
+    for (int i = 0; jumlahThread > i ; i++)
+    {
+        int* p;
+        pthread_create(&threads[i], NULL, perkalianMatrix, (void*)(p));
+    }
+
+    for (int i = 0; i < jumlahThread; i++) {
+      pthread_join(threads[i], NULL);
+    }
+```
+Pertama kita deklarasikan dahulu jumlah thread yang ingin di gunakan, lalu looping untuk membuat threadnya dan menjalankan fungsi perkalianMatrix. Disini akan membuat thread sebanyak besar matrix hasil yaitu 20. Dan terakhir thread akan di join untuk menunggu thread yang lainnya selesai.
+
+```c
+int step = 0;
+
+void* perkalianMatrix (void* args)
+{
+  int curThread = step;
+  step++;
+  int i = (int)curThread/matrix2Y;
+  for (int j = 0; j < matrix1Y; j++)
+  {
+      matrixHasil[i][curThread%matrix2Y] += matrix1[i][j] * matrix2[j][curThread%matrix2Y];
+  }
+}
+```
+Fungsi perkalian matrix adalah untuk melakukan perkalian. Thread akan mengambil sebuah nilai, yang kemudian nilai tersebut akan menjadi perhitungan nilai mana yang akan diproses oleh thread tersebut. Misal, jika dapat nilai 4, maka thread akan memproses nilai matrixHasil[0][4]. Jika 5, maka matrixHasil[1][0].
+
+```c
+for (size_t i = 0; i < matrix1X; i++) {
+      for (size_t j = 0; j < matrix2Y; j++) {
+        printf("%d ", matrixHasil[i][j]);
+      }
+      printf("\n");
+    }
+```
+Potongan diatas akan menampilkan hasil dari perkalian matrix.
+
+```c
+    key_t key = 1234;
+    int shmid = shmget(key, sizeof(int[4][5]), 0666|IPC_CREAT);
+    int (*matrix)[5];
+    matrix = shmat(shmid,(void*)0,0);
+
+    for (size_t i = 0; i < matrix1X; i++) {
+      for (size_t j = 0; j < matrix2Y; j++) {
+        matrix[i][j] = matrixHasil[i][j];
+      }
+    }
+    shmdt(matrix);
+```
+Potongan diatas akan membuat shared memory yang disimpan dengan key 1234. Yang dishare adalah matrix 4x5 yang merupakan hasilnya. Perulangan di atas adalah untuk mengcopy nilai matrix hasil kedalam matrix yang akan di share.
+
+### 4b.
+
+```c
+    key_t key =1234;
+    int shmid = shmget(key, sizeof(int[4][5]), 0666 | IPC_CREAT);
+    int (*matrix)[5];
+    matrix = shmat(shmid,(void*)0,0);
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 5; j++) {
+        printf("%d ", matrix[i][j]);
+      }
+      printf("\n");
+    }
+```
+Potongan diatas adalah untuk menampilkan matrix dari soal 4a ke layar. Dengan menggunakan shared memory, maka akan memasukkan nilai matrix ke dalam variable matrix. Lalu ada perulangan untuk print hasil ke  layar terminal.
+
+```c
+    int jumlahThread = 4;
+    pthread_t threads [jumlahThread];
+
+    for (size_t j = 0; j < 4; j++) {
+      for (size_t k = 0; k < 5; k++) {
+        hasil = 0;
+        step = 0;
+        for (int i = 0; jumlahThread > i ; i++)
+        {
+            int p = matrix[j][k];
+            pthread_create(&threads[i], NULL, perkalianMatrix, (void*)(&p));
+        }
+
+        for (int i = 0; i < jumlahThread; i++)
+        {
+          pthread_join(threads[i], NULL);
+        }
+        printf("%llu ", hasil);
+      }
+      printf("\n");
+    }
+    shmdt(matrix);
+    shmctl(shmid,IPC_RMID,NULL);
+```
+Lalu akan dibuatlah dihitunglah pertambahannya, menggunakan 4 thread disini. Akan melakukan looping sebanyak ukuran matrix hasil dari soal 4a dan kemudian membuat 4 thread dengan passing argumen nilai dari matrix yang ingin dihitung.
+Lalu akan menjoinkan thread tersebut dan akan memprintkan hasil dari pertambahan.
+
+Terakhir, akan mendetach dirinya dari shared memory, dan men-destroy shared memory tersebut.
+
+```c
+int step = 0;
+unsigned long long  hasil = 0;
+pthread_mutex_t lock;
+
+void* perkalianMatrix (void* args)
+{
+  int *p;
+  p = (int*) args;
+
+  int curThread = step;
+  step++;
+
+  double mulai = ceil(*p * curThread/4) + 1, selesai = ceil(*p * (curThread+1)/4);
+  int i, l = (int)selesai;
+  for(i = (int)mulai; l >= i; i++)
+  {
+    pthread_mutex_lock(&lock);
+    hasil += i;
+    pthread_mutex_unlock(&lock);
+  }
+}
+```
+Potongan program diatas akan membagi bilangan menjadi 4. misal bilangan 12, maka thread 1 akan menghitung 1+2+3, thread 2 akan menghitung 4+5+6, thread 3 akan menghitung 7+8+9, thread 4 akan menghitung 10+11+12. variable mulai menandakan thread akan menghitung dari mana, dan variable selesai akan menandakan sampai mana.
+
+Lalu hasilnya akan ditambahkan kedalam satu variable global. `pthread_mutex_lock(&lock)` akan melakukan mutual exclusion akan tidak ada tabrakan dalam penambahan hasil.
+
+### 4c
+
+```c
+int fd1[2];
+
+int main()
+{
+	if (pipe(fd1)==-1)
+	{
+		fprintf(stderr, "Pipe Failed" );
+		return 1;
+	}
+
+	if (fork() == 0)// ls
+	{
+		execLS();
+	}
+
+	if(fork() == 0)// wc -l
+	{
+		execWC();
+	}
+}
+```
+potongan diatas akan membuat pipe. Setelah itu akan membuat child process untuk menjalankan fungsi yang berbeda.
+
+```c
+void execLS ()
+{
+	dup2(fd1[1], 1);
+	close(fd1[0]);
+	close(fd1[1]);
+	char *argv[] = {"ls", NULL};
+	execv("/bin/ls", argv);
+}
+```
+fungsi diatas akan melakukan command `ls`. Pertama akan melakukan duplikasi terhadap pipe 1 yang berguna untuk write kedalam pipe. akan mengeksekusi command ls dan dimasukkan ke pipe 1.
+
+```c
+void execWC()
+{
+	dup2(fd1[0], 0);
+	close(fd1[0]);
+	close(fd1[1]);
+	char *argv[] = {"wc", "-l", NULL};
+	execv("/usr/bin/wc", argv);
+}
+```
+fungsi diatas akan melakukan command `wc -l`. Pertama akan melakukan duplikasi terhadap pipe 1 yang berguna untuk read dari pipe, hasil dari command `ls` tadi dan memprosesnya. Akan mengeksekusi command wc -l dan ditampilkan ke terminal.
