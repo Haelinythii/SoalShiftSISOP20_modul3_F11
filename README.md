@@ -412,11 +412,26 @@ sama) ke dalam folder sesuai ekstensinya yang folder hasilnya terdapat di workin
 directory ketika program kategori tersebut dijalankan.
 
 Berikut adalah perintah soal:
-- Pada opsi -f, user bisa menambahkan argumen file yang bisa dikategorikan sebanyak yang user inginkan seperti contoh di atas. Pada program kategori ini, folder jpg,c,zip tidak dibuat secara manual, melainkan melalui program c. Semisal ada file yang tidak memiliki ekstensi, maka dia akan disimpan dalam folder “Unknown”.
-- Program kategori ini juga menerima perintah (*). Artinya mengkategori seluruh file yang ada di working directory ketika menjalankan program C tersebut.
-- Selain hal itu program C ini juga menerima opsi -d untuk melakukan kategori pada suatu directory. Untuk opsi -d ini, user hanya bisa menginput 1 directory saja, tidak seperti file yang bebas menginput file sebanyak mungkin. Hasilnya perintah di atas adalah mengkategorikan file di /path/to/directory dan hasilnya akan disimpan di working directory di mana program C tersebut berjalan (hasil kategori filenya bukan di /path/to/directory).
-- Program ini tidak rekursif. Semisal di directory yang mau dikategorikan, atau menggunakan (*) terdapat folder yang berisi file, maka file dalam folder tersebut tidak dihiraukan, cukup file pada 1 level saja.
-- Setiap 1 file yang dikategorikan dioperasikan oleh 1 thread agar bisa berjalan secara paralel sehingga proses kategori bisa berjalan lebih cepat. Dilarang juga menggunakan fork-exec dan system.
+- Pada opsi -f, user bisa menambahkan argumen file yang bisa dikategorikan
+  sebanyak yang user inginkan seperti contoh di atas.
+  Pada program kategori ini, folder jpg,c,zip tidak dibuat secara manual,
+  melainkan melalui program c. Semisal ada file yang tidak memiliki ekstensi,
+  maka dia akan disimpan dalam folder “Unknown”.
+- Program kategori ini juga menerima perintah (*).
+  Artinya mengkategori seluruh file yang ada di working directory ketika
+  menjalankan program C tersebut.
+- Selain hal itu program C ini juga menerima opsi -d untuk melakukan kategori
+  pada suatu directory. Untuk opsi -d ini, user hanya bisa menginput 1 directory
+  saja, tidak seperti file yang bebas menginput file sebanyak mungkin.
+  Hasilnya perintah di atas adalah mengkategorikan file di /path/to/directory dan
+  hasilnya akan disimpan di working directory di mana program C tersebut
+  berjalan (hasil kategori filenya bukan di /path/to/directory).
+- Program ini tidak rekursif. Semisal di directory yang mau dikategorikan, atau
+  menggunakan (*) terdapat folder yang berisi file, maka file dalam folder
+  tersebut tidak dihiraukan, cukup file pada 1 level saja.
+- Setiap 1 file yang dikategorikan dioperasikan oleh 1 thread agar bisa berjalan
+  secara paralel sehingga proses kategori bisa berjalan lebih cepat. Dilarang
+  juga menggunakan fork-exec dan system.
 ```
 **Jawaban :**
 ```c
