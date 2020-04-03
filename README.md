@@ -404,6 +404,131 @@ Untuk terminate kedua proses, masukan input 1 1 1. Akan ada fork-exec yang mengg
 
 ## Soal 3
 
+**Soal :**
+```
+Buatlah sebuah program dari C untuk mengkategorikan file. Program ini akan
+memindahkan file sesuai ekstensinya (tidak case sensitive. JPG dan jpg adalah
+sama) ke dalam folder sesuai ekstensinya yang folder hasilnya terdapat di working
+directory ketika program kategori tersebut dijalankan.
 
+Berikut adalah perintah soal:
+- Pada opsi -f, user bisa menambahkan argumen file yang bisa dikategorikan sebanyak yang user inginkan seperti contoh di atas. Pada program kategori ini, folder jpg,c,zip tidak dibuat secara manual, melainkan melalui program c. Semisal ada file yang tidak memiliki ekstensi, maka dia akan disimpan dalam folder “Unknown”.
+- Program kategori ini juga menerima perintah (*). Artinya mengkategori seluruh file yang ada di working directory ketika menjalankan program C tersebut.
+- Selain hal itu program C ini juga menerima opsi -d untuk melakukan kategori pada suatu directory. Untuk opsi -d ini, user hanya bisa menginput 1 directory saja, tidak seperti file yang bebas menginput file sebanyak mungkin. Hasilnya perintah di atas adalah mengkategorikan file di /path/to/directory dan hasilnya akan disimpan di working directory di mana program C tersebut berjalan (hasil kategori filenya bukan di /path/to/directory).
+- Program ini tidak rekursif. Semisal di directory yang mau dikategorikan, atau menggunakan (*) terdapat folder yang berisi file, maka file dalam folder tersebut tidak dihiraukan, cukup file pada 1 level saja.
+- Setiap 1 file yang dikategorikan dioperasikan oleh 1 thread agar bisa berjalan secara paralel sehingga proses kategori bisa berjalan lebih cepat. Dilarang juga menggunakan fork-exec dan system.
+```
+**Jawaban :**
+```c
+// Fungsi pembuat Thread untuk "kategori -f"
+void* moveFile(void *arg)
+{
+	pthread_t id=pthread_self();
+    /* Pengambilan ekstensi file */
+    // Pembuatan folder dengan nama ekstensi file, jika file belum dibuat
+    if(mkdir(destFolder, 0777) == -1);
+
+    char destPath[10000];
+	// Membuat absolute path tujuan, source menggunakan argumen fungsi
+    snprintf(destPath, 10000, "%s/%s/%s", workingDir, destFolder, getFilename((char *)arg));
+    moveFileUtil((char *)arg, destPath);
+
+	return NULL;
+}
+
+// Fungsi pembuat Thread untuk "kategori *"
+void* moveAllFile(void *arg)
+{
+	pthread_t id=pthread_self();
+    /* Pengambilan ekstensi file */
+    // Pembuatan folder dengan nama ekstensi file, jika file belum dibuat
+    if(mkdir(destFolder, 0777) == -1);        
+
+    char destPath[10000];
+    char sourcePath[10000];
+	// Membuat absolute path dari source dan tujuan
+    snprintf(sourcePath, 10000, "%s/%s", workingDir, (char *)arg);
+    snprintf(destPath, 10000, "%s/%s/%s", workingDir, destFolder, getFilename((char *)arg));
+    moveFileUtil(sourcePath, destPath);
+
+	return NULL;
+}
+
+// Fungsi pembuat Thread untuk "kategori -d"
+void* moveTempFile(void *arg)
+{
+	pthread_t id=pthread_self();
+    /* Pengambilan ekstensi file */
+    // Pembuatan folder dengan nama ekstensi file, jika file belum dibuat
+    if(mkdir(destFolder, 0777) == -1);
+
+    char destPath[10000];
+    char sourcePath[10000];
+	// Membuat absolute path dari source dan tujuan
+    snprintf(sourcePath, 10000, "%s/%s", tempWrkDir, (char *)arg);
+    snprintf(destPath, 10000, "%s/%s/%s", workingDir, destFolder, getFilename((char *)arg));
+    moveFileUtil(sourcePath, destPath);
+
+	return NULL;
+}
+
+// Driver
+int main(int argc, char **argb){
+    // Mendapat working path program ketika dijalankan
+    char buf[1000];
+    workingDir = getcwd(buf, 1000);
+
+    /* Initialisasi beberapa value seperti i, p, dan err. */
+
+    if(!strcmp(argb[1], "-f")){
+        while(argb[i] != NULL){
+            err=pthread_create(&(tid[i-2]),NULL,&moveFile,(void *)argb[i]);
+            /* Cek error dan increment nilai*/
+        }
+		// Menunggu semua thread menyelesaikan tugasnya
+        for(p=0; p<(i-1); p++)
+            pthread_join(tid[p],NULL);
+    } else if(!strcmp(argb[1], "*")) {
+        /* Initialisasi pengecekkan direktori */
+        if(d){
+            while((dir = readdir(d)) != NULL){
+			    // Diperiksa apakah objek ada dan apakah objek berupa file atau direktori
+                if (stat(dir->d_name, &myFile) < 0);
+                else if (!S_ISDIR(myFile.st_mode))
+                {
+                    err=pthread_create(&(tid[i-2]),NULL,&moveAllFile,(void *)dir->d_name);
+                    /* Cek error dan increment nilai*/
+                } else;
+            }
+			// Menunggu semua thread menyelesaikan tugasnya
+            for(p=0; p<(i-1); p++)
+                pthread_join(tid[p],NULL);
+        }
+    } else if(!strcmp(argb[1], "-d")) {
+        // Mengubah working direktori sesuai dengan argumen setelah -d
+		chdir(argb[2]);
+        tempWrkDir = getcwd(buf, 1000);
+        /* Initialisasi pengecekkan direktori */
+        if(d){
+            while((dir = readdir(d)) != NULL){
+			    // Diperiksa apakah objek ada dan apakah objek berupa file atau direktori
+                if (stat(dir->d_name, &myFile) < 0);
+                else if (!S_ISDIR(myFile.st_mode))
+                {
+                    err=pthread_create(&(tid[i-2]),NULL,&moveTempFile,(void *)dir->d_name);
+                    /* Cek error dan increment nilai*/
+                } else;
+            }
+			// Menunggu semua thread menyelesaikan tugasnya
+            for(p=0; p<(i-1); p++)
+                pthread_join(tid[p],NULL);
+        }
+    }
+    return 0;
+}
+
+```
+**Penjelasan :**
+Pengerjaan soal menggunakan salah satu ddari 3 fungsi thread yang dibuat, sesuai dengan argumen yang dimasukan. Pada argumen "-f", akan dibuat thread sebanyak banyak argumen setelah "-f". Pada argumen "\*", akan dibuat thread sebanyak semua file dalam working directory. Pada argumen "-d", akan dibuat thread sebanyak semua file dalam path directory pada argumen setelah "-d". Tiap thread akan membuat folder dengan nama sesuai dengan ekstensi file yang diproses, jika folder belum ada. Karena tidak case sensitif, semua folder edngan huruf uppercase akan diubah menjadi lowercase. Setelah itu, thread memproses absolute path dari source dan tujuan. Fungsi moveFileUtil akan menyalin isi dari source ke tujuan dan remove source. Dalam kata lain, file tersebut dipindahkan ke dalam folder yang baru saja dibuat.
 
 ## Soal 4
