@@ -108,11 +108,10 @@ int main(int argc, char **argb){
             err=pthread_create(&(tid[i-2]),NULL,&moveFile,(void *)argb[i]);
             if(err!=0)
                 printf("Gagal\n");
-            else
-                printf("Sukses\n");
+            // else
+            //     printf("Sukses\n");
             i++;
         }
-
         for(p=0; p<(i-1); p++)
             pthread_join(tid[p],NULL);
     } else if(!strcmp(argb[1], "*")) {
@@ -128,12 +127,11 @@ int main(int argc, char **argb){
                     err=pthread_create(&(tid[i-2]),NULL,&moveAllFile,(void *)dir->d_name);
                     if(err!=0)
                         printf("Gagal\n");
-                    else
-                        printf("Sukses\n");
+                    // else
+                    //     printf("Sukses\n");
                     i++;
                 } else;
             }
-
             for(p=0; p<(i-1); p++)
                 pthread_join(tid[p],NULL);
         }
@@ -157,10 +155,9 @@ int main(int argc, char **argb){
                     i++;
                 } else;
             }
-
             for(p=0; p<(i-1); p++)
                 pthread_join(tid[p],NULL);
-}
+        }
     }
     return 0;
 }
