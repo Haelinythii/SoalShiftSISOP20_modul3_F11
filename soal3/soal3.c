@@ -11,7 +11,8 @@
 pthread_t tid[100000];
 int curIndex;
 char *workingDir;
-char *tempWrkDir;
+char tempWrkDir[10000];
+char formerDir[10000];
 
 void moveFileUtil(char source[], char dest[]);
 char* getFilename(char str[]);
@@ -62,7 +63,7 @@ void* moveAllFile(void *arg)
 
     char destPath[10000];
     char sourcePath[10000];
-    snprintf(sourcePath, 10000, "%s/%s", workingDir, (char *)arg);
+    snprintf(sourcePath, 10000, "%s/%s", formerDir, (char *)arg);
     snprintf(destPath, 10000, "%s/%s/%s", workingDir, destFolder, getFilename((char *)arg));
     moveFileUtil(sourcePath, destPath);
 
@@ -84,13 +85,16 @@ void* moveTempFile(void *arg)
             if(destFolder[i] > 64 && destFolder[i] < 91)
                 destFolder[i] += 32;
     }
-            
+
+    chdir(formerDir);            
     if(mkdir(destFolder, 0777) == -1);
+    chdir(tempWrkDir);
 
     char destPath[10000];
     char sourcePath[10000];
     snprintf(sourcePath, 10000, "%s/%s", tempWrkDir, (char *)arg);
-    snprintf(destPath, 10000, "%s/%s/%s", workingDir, destFolder, getFilename((char *)arg));
+    snprintf(destPath, 10000, "%s/%s/%s", formerDir, destFolder, getFilename((char *)arg));
+    printf("%s %s\n", sourcePath, destPath);
     moveFileUtil(sourcePath, destPath);
 
 	return NULL;
@@ -99,6 +103,7 @@ void* moveTempFile(void *arg)
 int main(int argc, char **argb){
     char buf[1000];
     workingDir = getcwd(buf, 1000);
+    snprintf(formerDir, 10000, "%s", workingDir);
 
     int i=2, p;
     int err;
@@ -108,10 +113,11 @@ int main(int argc, char **argb){
             err=pthread_create(&(tid[i-2]),NULL,&moveFile,(void *)argb[i]);
             if(err!=0)
                 printf("Gagal\n");
-            // else
-            //     printf("Sukses\n");
+            else
+                printf("Sukses\n");
             i++;
         }
+
         for(p=0; p<(i-1); p++)
             pthread_join(tid[p],NULL);
     } else if(!strcmp(argb[1], "*")) {
@@ -127,17 +133,19 @@ int main(int argc, char **argb){
                     err=pthread_create(&(tid[i-2]),NULL,&moveAllFile,(void *)dir->d_name);
                     if(err!=0)
                         printf("Gagal\n");
-                    // else
-                    //     printf("Sukses\n");
+                    else
+                        printf("Sukses\n");
                     i++;
                 } else;
             }
+
             for(p=0; p<(i-1); p++)
                 pthread_join(tid[p],NULL);
         }
     } else if(!strcmp(argb[1], "-d")) {
         chdir(argb[2]);
-        tempWrkDir = getcwd(buf, 1000);
+        workingDir = getcwd(buf, 1000);
+        snprintf(tempWrkDir, 10000, "%s", workingDir);
         DIR *d;
         struct dirent *dir;
         struct stat myFile;
@@ -150,14 +158,15 @@ int main(int argc, char **argb){
                     err=pthread_create(&(tid[i-2]),NULL,&moveTempFile,(void *)dir->d_name);
                     if(err!=0)
                         printf("Gagal\n");
-                    // else
-                    //     printf("Sukses\n");
+                    else
+                        printf("Sukses\n");
                     i++;
                 } else;
             }
+
             for(p=0; p<(i-1); p++)
                 pthread_join(tid[p],NULL);
-        }
+}
     }
     return 0;
 }
