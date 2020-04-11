@@ -136,10 +136,11 @@ if(pthread_equal(id,tid[1])){
                 pkmnAP[p] -= 10;
                 if(pkmnAP[p] < 10){
                     int cek = RNG(90);
-                    if(cek == 1)
+                    if(cek == 1){
                         pkmnSlot[p] = 0;
-                    else
+                    } else{
                         pkmnAP[p] = 50;
+                    }
                 }
             }
         }
