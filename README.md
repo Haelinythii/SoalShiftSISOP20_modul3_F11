@@ -400,7 +400,462 @@ Untuk terminate kedua proses, masukan input 1 1 1. Akan ada fork-exec yang mengg
 
 ## Soal 2
 
+### tap player
+```c
+int main(int argc, char const *argv[]) {
+    struct sockaddr_in address;
+    int sock = 0, valread;
+    struct sockaddr_in serv_addr;
+    char *hello = "Hello from client";
+    char buffer[1024] = {0};
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("\n Socket creation error \n");
+        return -1;
+    }
 
+    memset(&serv_addr, '0', sizeof(serv_addr));
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+
+    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0) {
+        printf("\nInvalid address/ Address not supported \n");
+        return -1;
+    }
+
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        printf("\nConnection Failed \n");
+        return -1;
+    }
+    screen1(sock);
+}
+```
+pada program main, akan melakukan socket kepada server. jika sudah terconnect, maka akan menjalankan fungsi screen1.
+
+```c
+void screen1(int sock)
+{
+  int valread;
+  char choice[100], usrname[100] = "", pass[100] = "";
+  printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+  printf("1. Login\n");
+  printf("2. Register\n");
+  printf("   Choices : ");
+
+  scanf("%s", choice);
+  send(sock , choice , strlen(choice) , 0 );
+
+  if(!strcmp(choice, "login") == 0 && !strcmp(choice, "register") == 0)
+  {
+    screen1(sock);
+    return;
+  }
+
+  printf("Username : ");
+  getchar();
+  scanf("%[^\n]s", usrname);
+  send(sock , usrname , strlen(usrname) , 0 );
+  printf("Password : ");
+  getchar();
+  scanf("%[^\n]s", pass);
+  send(sock , pass , strlen(pass) , 0 );
+
+  char msgAuth[100] = "";
+  valread = read( sock , msgAuth, 1024);
+  printf("%s\n", msgAuth);
+  if(strcmp(msgAuth, "Login Success") == 0 || strcmp(msgAuth, "Register Success") == 0)
+  {
+    screen2(sock);
+  }
+  else
+  {
+    screen1(sock);
+  }
+}
+```
+difungsi screen1 ini, akan memprint screen 1 seperti dengan soal. Player bisa mengetikkan pilihan login atau register dan akan discan. Kemudian akan mengirimkan signal ke server apakah dia login atau register. Kemudian akan melakukan scan pada username dan password yang diinputkan oleh player. Setelah itu akan mengirimkan username dan password tersebut ke server untuk di cek. Jika id tidak valid, maka program akan menampilkan screen1 lagi, sampai player bisa login atau register dengan sukses.
+
+```c
+void screen2(int sock)
+{
+  health = 100; //reset health
+
+  int valread;
+  char choiceScreen2[100];
+  printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+  printf("1. Find Match\n" );
+  printf("2. Logout\n" );
+  printf("   Choices : " );
+  scanf("%s", choiceScreen2);
+  send(sock , choiceScreen2 , strlen(choiceScreen2) , 0 );
+  if(strcmp(choiceScreen2, "logout") == 0)
+  {
+    screen1(sock); //balik ke screen1
+  }
+  else if(strcmp(choiceScreen2, "find") == 0)
+  {
+    char a[100] = "";
+    do {
+
+      valread = read( sock , a, 1024);
+      printf("Waiting for player ...\n");
+    } while(strcmp(a, "Waiting for player ...") == 0);
+
+    printf("Game dimulai silahkan tap tap secepat mungkin !!\n");
+    //send signal
+    //loop waiting for signal back
+    pthread_t thread[2];
+
+    pthread_create(&thread[0], NULL, mulaiMatchTap, &sock);
+    pthread_create(&thread[1], NULL, mulaiMatchRead, &sock);
+    pthread_join(thread[1], NULL);
+
+    tcsetattr( STDIN_FILENO, TCSANOW, &oldt);//ngembalikan settingan stdin
+
+    screen2(sock);
+  }
+  else
+  {
+    screen2(sock);
+  }
+}
+```
+difungsi screen2 ini, player akan diminta memasukkan pilihan find atau logout. Pilihan akan disend ke server. Jika menginputkan "find", maka akan menunggu untuk player lain mengetikkan find juga dengan membaca signal dari server, jika server mengembalikan "Waiting for player ...", maka akan tetap menunggu. Selain itu maka player2 sudah dianggap connect. Program akan membuat 2 thread. Thread 1 akan menjalankan fungsi "mulaiMatchTap" dan yang lain akan menjalankan "mulaiMatchRead". dan kemudian akan dijoin untuk menunggu permainan sampai selesai.
+
+* `tcsetattr( STDIN_FILENO, TCSANOW, &oldt);` akan mengembalikan settingan stdin yang telah diubah di fungsi mulaiMatchTap
+
+Setelah match berakhir maka akan menjalankan fungsi screen2 lagi, yaitu kembali ke screen2.
+
+Jika menginputkan logout, maka akan menjalankan fungsi screen1 untuk kembali ke layar login.
+
+```c
+int health = 100;
+pthread_t tempThread;
+
+static struct termios oldt, newt;
+
+void* mulaiMatchTap(void* args)
+{
+  tempThread = pthread_self();
+
+  int sock = *(int *) args;
+  int c;
+
+  tcgetattr( STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+  while((c=getchar())!= '-')
+  {
+    if(c == ' ')
+    {
+      char hp[10] = "hit";
+      send(sock , hp , strlen(hp) , 0 );
+      printf("hit !!\n");
+    }
+    putchar(c);
+    if(health <= 0)
+      break;
+  }
+
+  printf("\n");
+}
+```
+fungsi diatas adalah untuk mendeteksi jika player melakukan tap.
+* `tempThread = pthread_self();` adalah untuk mendapatkan id thread sendiri.
+* `while((c=getchar())!= '-')` adalah untuk mendeteksi jika player melakukan tap
+
+Jika player melakukan tap, maka akan mengirimkan signal ke server untuk mengurangi darah musuh dan memprintkan "hit !!" pada layar sendiri. Jika darah kurang dari 0 maka loop sudah selesai karena kondisi menang kalah sudah tercapai.
+
+```c
+void* mulaiMatchRead(void* args)
+{
+  int sock = *(int *) args, valread;
+  char hitRead[100];
+  while (health > 0)
+  {
+    valread = read( sock , hitRead, 1024);
+    if(strcmp(hitRead, "Game berakhir kamu kalah") == 0)
+    {
+      printf("%s\n", hitRead);
+      pthread_cancel(tempThread);
+      send(sock , hitRead , strlen(hitRead) , 0 ); // send biar ga stuck
+      break;
+    }
+    else if (strcmp(hitRead, "Game berakhir kamu menang") == 0)
+    {
+      printf("%s\n", hitRead);
+      pthread_cancel(tempThread);
+      break;
+    }
+    health -= 10;
+    printf("%d\n", health);
+  }
+}
+```
+fungsi diatas adalah untuk mendeteksi jika player musuh melakukan tap. Akan menunggu (read) dari server signal yang menandakan bahwa ditembak/ditap. Akan mencek signal tersebut jika isinya adalah "menang" atau "kalah" yang berarti permainan telah selesai, melakukan print kondisi menang atau kalah dan mencancel thread yang menjalankan fungsi mulaiMatchTap. Jika bukan menang atau kalah, maka akan memprint darahnya sekarang.
+
+### tapserver
+```c
+int main(int argc, char const *argv[]) {
+    int server_fd, new_socket, valread;
+    struct sockaddr_in address;
+    int opt = 1;
+    int addrlen = sizeof(address);
+    char buffer[1024] = {0};
+    char *hello = "Hello from server";
+
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons( PORT );
+
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(server_fd, 3) < 0) {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+    pthread_t thread[MAXROOM * 2];
+    while (true)
+    {
+      addrlen = sizeof(address);
+      if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
+          perror("accept");
+          exit(EXIT_FAILURE);
+      }
+      int *p_client_socket = (int *) malloc(2 * sizeof(int));
+      socketIDs[players] = new_socket;
+
+
+      pthread_create(&thread[players], NULL, screen1Handler, &new_socket);
+      players++;
+    }
+    return 0;
+}
+```
+
+Pada program main ini, server akan menunggu client baru, kemudian akan membuatkan thread untuk setiap client nya untuk menjalankan fungsi screen1Handler. Proses menunggu client itu berjalan pada perulangan while(true) diatas.
+
+```c
+struct identitas
+{
+  char usrname[100];
+  char password[100];
+};
+```
+id dari setiap player akan disimpan dalam bentuk struct yang berisi char username dan password.
+
+```c
+void* screen1Handler (void* args)
+{
+  int valread, new_socket = *(int*)args;
+  char msgServer [100] = "", loginRegister[100] = "", usrname[100] = "", pass[100] = "";
+  struct identitas id;
+  valread = read( new_socket , loginRegister, 1024);
+  if(!strcmp(loginRegister, "login") == 0 && !strcmp(loginRegister, "register") == 0)
+  {
+    screen1Handler(&new_socket);
+    pthread_cancel(pthread_self());
+  }
+  valread = read( new_socket , usrname, 1024);
+  valread = read( new_socket , pass, 1024);
+
+  strcpy(id.usrname, usrname);
+  strcpy(id.password, pass);
+  // printf("%s\n", id.usrname);
+  // printf("%s\n", id.password);
+
+  FILE *f;
+  f = fopen("akun.txt", "a+");
+
+  if(strcmp(loginRegister, "login") == 0)
+  {
+    struct identitas checkID;
+    bool loginSuccess = false;
+    char loginCheck[100] = "";
+    while(fread(&checkID,sizeof(struct identitas), 1, f))
+    {
+      if(strcmp(id.usrname, checkID.usrname) == 0 && strcmp(id.password, checkID.password) == 0)
+      {
+        printf("Auth Success\n");
+        loginSuccess = true;
+        strcat(loginCheck, "Login Success");
+        break;
+      }
+    }
+    if(!loginSuccess)
+    {
+      printf("Auth Failed\n");
+      strcat(loginCheck, "Login Failed");
+      send(new_socket , loginCheck , strlen(loginCheck) , 0 );
+      screen1Handler(&new_socket);
+      pthread_cancel(pthread_self());
+    }
+    else
+      send(new_socket , loginCheck , strlen(loginCheck) , 0 );
+    //printf("loginboi\n");
+  }
+  else if(strcmp(loginRegister, "register") == 0)
+  {
+    pthread_mutex_lock(&lock);
+
+    //printf("regisboi\n");
+
+    printf("List account :\n");
+    struct identitas checkID;
+    while(fread(&checkID,sizeof(struct identitas), 1, f))
+    {
+      printf("Username: %s\nPassword: %s\n\n", checkID.usrname, checkID.password);
+    }
+    printf("Username: %s\nPassword: %s\n\n", id.usrname, id.password);
+    char regis[100] = "Register Success";
+    send(new_socket , regis , strlen(regis) , 0 );
+    fwrite(&id, sizeof(struct identitas), 1, f);
+
+    pthread_mutex_unlock(&lock);
+  }
+  else
+  {
+    strcat(msgServer, "Salah memasukkan command");
+  }
+  fclose(f);
+  screen2Handler(new_socket);
+}
+```
+
+Pada fungsi screen1Handler ini membaca send dari server apakah dia ingin register atau login, dan juga akan membaca username dan password yang dimasukkan. Jika client mengirim register, maka akan melakukan print semua identitas player yang terdaftar termasuk identitas client itu sendiri dengan fungsi fread dan akan menuliskan identitas itu di file akun.txt dengan fungsi fwrite().
+
+Jika player mengirimkan login, maka program akan melakukan check identitas didalam file akun.txt. Akan dibaca satu persatu dari atas sampai bawah. Jika tidak terdapat maka akan menampilkan pesan error "Auth Failed". Jika identitas sudah terdaftar maka akan menampilkan "Auth Success".
+
+Jika telah success melakukan login atau register maka akan melanjutkan ke fungsi screen2Handler
+
+```c
+void screen2Handler(int new_socket)
+{
+  healthPlayer1 = 100;
+  healthPlayer2 = 100;
+
+  int valread;
+  int roomNow;
+  char findOrLogout[100] = "";
+  valread = read( new_socket , findOrLogout, 1024);
+
+  if(strcmp(findOrLogout, "find") == 0)
+  {
+    roomNow = cariRoom();
+
+    //set health untuk player
+    healthPlayer1PerRoom[roomNow] = 100;
+    healthPlayer2PerRoom[roomNow] = 100;
+
+    socketIDsPerRoom[roomNow][roomPlayersConnected[roomNow]] = new_socket;
+
+    roomPlayersConnected[roomNow]++;
+    while (roomPlayersConnected[roomNow] < 2)
+    {
+      //wait
+      char a[100] = "Waiting for player ...";
+      send(new_socket , a , strlen(a) , 0 );
+      usleep(100000);
+    }
+    char a[100] = "mulai";
+    send(new_socket , a , strlen(a) , 0 );
+
+    room[roomNow] = true;
+
+    char menang[100] = "Game berakhir kamu menang";
+    while(true)
+    {
+      char hit[100], hitSend[100] = "hit";
+      valread = read( new_socket , hit, 1024);
+      if(healthPlayer2PerRoom[roomNow] <= 0 || healthPlayer1PerRoom[roomNow] <= 0)
+        break;
+
+      if(new_socket == socketIDsPerRoom[roomNow][0])
+      {
+        healthPlayer2PerRoom[roomNow] -=10;
+        if(healthPlayer2PerRoom[roomNow] <= 0)
+        {
+          strcpy(hitSend, "Game berakhir kamu kalah");
+          send(socketIDsPerRoom[roomNow][1], hitSend , strlen(hitSend) , 0 );
+          send(socketIDsPerRoom[roomNow][0] , menang , strlen(menang) , 0 );
+          break;
+        }
+        //send to 1
+        //printf("hit\n");
+        send(socketIDsPerRoom[roomNow][1] , hitSend , strlen(hitSend) , 0 );
+      }
+      else if (new_socket == socketIDsPerRoom[roomNow][1])
+      {
+        healthPlayer1PerRoom[roomNow] -=10;
+        if(healthPlayer1PerRoom[roomNow] <= 0)
+        {
+          strcpy(hitSend, "Game berakhir kamu kalah");
+          send(socketIDsPerRoom[roomNow][0] , hitSend , strlen(hitSend) , 0 );
+          send(socketIDsPerRoom[roomNow][1] , menang , strlen(menang) , 0 );
+          break;
+        }
+        //send to 0
+        //printf("hit\n");
+        send(socketIDsPerRoom[roomNow][0] , hitSend , strlen(hitSend) , 0 );
+      }
+    }
+  }
+  else if(strcmp(findOrLogout, "logout") == 0)
+  {
+    screen1Handler(&new_socket);
+  }
+  else
+  {
+    screen2Handler(new_socket);
+    return;
+  }
+  sleep(1);
+  playersConnected = 0;
+
+  roomPlayersConnected[roomNow] = 0; //reset socketID, playersConnected
+  socketIDsPerRoom[roomNow][0] = 0;
+  socketIDsPerRoom[roomNow][1] = 0;
+  room[roomNow] = false;
+
+  screen2Handler(new_socket);
+}
+```
+
+Pada screen2Handler ini akan membaca input dari player yaitu find atau logout.
+
+Jika logout maka akan kembali menjalankan fungsi screen1Handler.
+
+Jika find, maka akan mencarikan room untuk player yang tersedia. Lalu akan menunggu sampai player berikutnya melakukan find match. Jika sudah ada 2 player pada room tersebut, maka permainan akan dimulai. Server akan membaca send dari player jika mereka menekan spasi. Jika terbaca, maka akan mengirimkan suatu signal ke client lawannya yang akan mengurangi darahnya sekarang. Dan akan mengecek juga apakah permainan telah berakhir dengan cara melakukan cek darah player 1 dan 2 <= 0.
+
+Jika permainan telah berakhir, maka akan mengembalikan ke fungsi screen2Handler, namun sebelum itu akan mereset settingan room menjadi room yang kosong.
+
+```c
+int cariRoom()
+{
+  for (int i = 0; i < MAXROOM; i++) {
+    if(room[i] == false)
+    {
+      return i;
+    }
+  }
+}
+```
+
+fungsi cariRoom ini berfungsi untuk mencari room yang kosong dan mereturn index room mana yang kosong. Akan ditangkap oleh variabel integer di dalam fungsi screen2Handler.
 
 ## Soal 3
 
