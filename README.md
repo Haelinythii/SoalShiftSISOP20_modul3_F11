@@ -739,7 +739,7 @@ void* screen1Handler (void* args)
 
 Pada fungsi screen1Handler ini membaca send dari server apakah dia ingin register atau login, dan juga akan membaca username dan password yang dimasukkan. Jika client mengirim register, maka akan melakukan print semua identitas player yang terdaftar termasuk identitas client itu sendiri dengan fungsi fread dan akan menuliskan identitas itu di file akun.txt dengan fungsi fwrite().
 
-Jika player mengirimkan login, maka program akan melakukan check identitas didalam file akun.txt. Akan dibaca satu persatu dari atas sampai bawah. Jika tidak terdapat maka akan menampilkan pesan error "Auth Failed". Jika identitas sudah terdaftar maka akan menampilkan "Auth Success".
+Jika player mengirimkan login, maka program akan melakukan check identitas didalam file akun.txt. Akan dibaca satu persatu dari atas sampai bawah dari file akun.txt dengan fread. Jika tidak terdapat identitasnya maka akan menampilkan pesan error "Auth Failed". Jika identitas sudah terdaftar maka akan menampilkan "Auth Success".
 
 Jika telah success melakukan login atau register maka akan melanjutkan ke fungsi screen2Handler
 
@@ -840,7 +840,7 @@ Pada screen2Handler ini akan membaca input dari player yaitu find atau logout.
 
 Jika logout maka akan kembali menjalankan fungsi screen1Handler.
 
-Jika find, maka akan mencarikan room untuk player yang tersedia. Lalu akan menunggu sampai player berikutnya melakukan find match. Jika sudah ada 2 player pada room tersebut, maka permainan akan dimulai. Server akan membaca send dari player jika mereka menekan spasi. Jika terbaca, maka akan mengirimkan suatu signal ke client lawannya yang akan mengurangi darahnya sekarang. Dan akan mengecek juga apakah permainan telah berakhir dengan cara melakukan cek darah player 1 dan 2 <= 0.
+Jika find, maka akan mencarikan room untuk player yang tersedia. Lalu akan menunggu sampai player berikutnya melakukan find match dengan melakukan loop while(playerConnected[room] < 2) dan usleep. Jika sudah ada 2 player pada room tersebut, maka server akan melakukan lock pada room tersebut jadi pemain selanjutnya tidak dapat masuk ke room itu lagi dan permainan akan dimulai. Server akan membaca send dari player jika mereka menekan spasi. Jika terbaca, maka akan mengirimkan suatu signal ke client lawannya yang akan mengurangi darahnya sekarang. Dan akan mengecek juga apakah permainan telah berakhir dengan cara melakukan cek darah player 1 dan 2 <= 0. Jika berakhir, maka akan mengirimkan pesan menang atau kalah ke pada player sesuai dengan player yang menang/kalah. 
 
 Jika permainan telah berakhir, maka akan mengembalikan ke fungsi screen2Handler, namun sebelum itu akan mereset settingan room menjadi room yang kosong.
 
