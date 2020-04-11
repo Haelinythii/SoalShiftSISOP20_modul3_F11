@@ -32,7 +32,6 @@ void* mulaiMatchTap(void* args)
     if(c == ' ')
     {
       char hp[10] = "hit";
-      //sprintf(hit, "%d", health)
       send(sock , hp , strlen(hp) , 0 );
       printf("hit !!\n");
     }
@@ -75,6 +74,7 @@ void screen2(int sock)
 
   int valread;
   char choiceScreen2[100];
+  printf("\n\n");
   printf("1. Find Match\n" );
   printf("2. Logout\n" );
   printf("   Choices : " );
@@ -91,7 +91,6 @@ void screen2(int sock)
 
       valread = read( sock , a, 1024);
       printf("Waiting for player ...\n");
-      /* code */
     } while(strcmp(a, "Waiting for player ...") == 0);
 
     printf("Game dimulai silahkan tap tap secepat mungkin !!\n");
@@ -102,12 +101,11 @@ void screen2(int sock)
     pthread_create(&thread[0], NULL, mulaiMatchTap, &sock);
     pthread_create(&thread[1], NULL, mulaiMatchRead, &sock);
     pthread_join(thread[1], NULL);
-    printf("lanjut\n");
+    //printf("lanjut\n");
 
     tcsetattr( STDIN_FILENO, TCSANOW, &oldt);//ngembalikan settingan stdin
 
     screen2(sock);
-    //mulaiMatch(sock);
   }
   else
   {
@@ -120,6 +118,7 @@ void screen1(int sock)
 {
   int valread;
   char choice[100], usrname[100] = "", pass[100] = "";
+  printf("\n\n");
   printf("1. Login\n");
   printf("2. Register\n");
   printf("   Choices : ");
@@ -136,7 +135,6 @@ void screen1(int sock)
   printf("Username : ");
   getchar();
   scanf("%[^\n]s", usrname);
-  //printf("%s\n", usrname);
   send(sock , usrname , strlen(usrname) , 0 );
   printf("Password : ");
   getchar();
@@ -159,13 +157,6 @@ void screen1(int sock)
 
 
 int main(int argc, char const *argv[]) {
-
-    // static struct termios oldt;
-    // tcgetattr( STDIN_FILENO, &oldt);
-    // oldt.c_lflag &= ICANON;
-    // tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
-
-
     struct sockaddr_in address;
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
@@ -190,23 +181,5 @@ int main(int argc, char const *argv[]) {
         printf("\nConnection Failed \n");
         return -1;
     }
-
-    //while (1)
-    //{
-      //char loginScreen[100] = {0};
-      //valread = read( sock , loginScreen, 1024);
-      //printf("%s", loginScreen);
-      screen1(sock);
-
-      // char msgUsername[100]
-      // valread = read( sock , msgUsername, 1024);
-      // char msgPassword[100]
-      // valread = read( sock , msgPassword, 1024);
-      //
-      // char buffer[1024] = {0};
-      //
-      // //printf("Hello message sent\n");
-      // valread = read( sock , buffer, 1024);
-      // printf("%s\n",buffer );
-    //}
+    screen1(sock);
 }
